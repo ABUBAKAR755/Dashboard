@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time Tracking Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f0f2f5;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: #1a1a2e;
+            color: white;
+            padding: 2rem 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 0 1.5rem 2rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-menu {
+            padding: 1.5rem 0;
+        }
+
+        .nav-item {
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            color: rgba(255,255,255,0.7);
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-item:hover {
+            background: rgba(255,255,255,0.05);
+            color: white;
+        }
+
+        .nav-item.active {
+            background: rgba(52, 211, 153, 0.1);
+            border-left-color: #34d399;
+            color: white;
+        }
+
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 260px;
+            flex: 1;
+            padding: 2rem;
+            background: #f0f2f5;
+        }
+
+        /* Loading State */
+        .loading {
+            text-align: center;
+            padding: 4rem;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .spinner {
+            width: 4rem;
+            height: 4rem;
+            border: 4px solid #f0f2f5;
+            border-top: 4px solid #3A80F7;
+            border-radius: 50%;
+            margin: 0 auto 1.5rem;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Dashboard Container */
+        .dashboard-container {
+            display: none;
+        }
+
+        .dashboard-container.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Top Bar */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .top-bar h1 {
+            font-size: 1rem;
+            color: #67748e;
+            font-weight: 400;
+        }
+
+        /* Filters Section */
+        .filters-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 1.5rem;
+        }
+
+        .filters-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .filters-header h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #252f40;
+        }
+
+        .reset-button {
+            background: #EF4444;
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .reset-button:hover {
+            background: #DC2626;
+        }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .filter-group label {
+            display: block;
+            font-size: 0.75rem;
+            color: #67748e;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .filter-select, .filter-input {
+            width: 100%;
+            padding: 0.625rem;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 0.875rem;
+        }
+
+        .filter-info-bar {
+            font-size: 0.875rem;
+            color: #67748e;
+            padding-top: 1rem;
+            border-top: 1px solid #f0f2f5;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .stat-info h3 {
+            font-size: 0.875rem;
+            color: #67748e;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #252f40;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-change {
+            font-size: 0.875rem;
+            color: #82d616;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .icon-blue { background: linear-gradient(135deg, #3A80F7 0%, #2563EB 100%); color: white; }
+        .icon-green { background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%); color: white; }
+        .icon-orange { background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%); color: white; }
+        .icon-purple { background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%); color: white; }
+        .icon-teal { background: linear-gradient(135deg, #00BCD4 0%, #0097A7 100%); color: white; }
+        .icon-pink { background: linear-gradient(135deg, #EC407A 0%, #D81B60 100%); color: white; }
+        .icon-dark { background: linear-gradient(135deg, #344767 0%, #1A2332 100%); color: white; }
+
+        /* Chart Cards */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .chart-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .chart-header h3 {
+            font-size: 1rem;
+            color: #252f40;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 200px;
+        }
+
+        /* Table */
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            overflow-x: auto;
+        }
+
+        .table-container h3 {
+            font-size: 1rem;
+            color: #252f40;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f9fafb;
+            padding: 0.75rem;
+            text-align: left;
+            font-weight: 700;
+            color: #67748e;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #f0f2f5;
+            color: #67748e;
+            font-size: 0.875rem;
+        }
+
+        td strong {
+            color: #252f40;
+            font-weight: 700;
+        }
+
+        tr:hover {
+            background: #fafbff;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+            .main-content {
+                margin-left: 0;
+            }
+            .stats-grid, .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>📊 Time Tracking Dashboard</h2>
+        </div>
+        <nav class="nav-menu">
+            <div class="nav-item active" data-period="weekly">
+                <div class="nav-icon">📅</div>
+                <span>Weekly</span>
+            </div>
+            <div class="nav-item" data-period="monthly">
+                <div class="nav-icon">📆</div>
+                <span>Monthly</span>
+            </div>
+            <div class="nav-item" data-period="overall">
+                <div class="nav-icon">📊</div>
+                <span>Overall</span>
+            </div>
+            <div class="nav-item" data-period="90days">
+                <div class="nav-icon">📈</div>
+                <span>90 Days</span>
+            </div>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Loading State -->
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Loading data from Airtable...</p>
+        </div>
+
+        <!-- Weekly Dashboard -->
+        <div id="weekly-dashboard" class="dashboard-container active">
+            <div class="top-bar">
+                <h1>🏠 Dashboard / Weekly</h1>
+            </div>
+
+            <div class="filters-section">
+                <div class="filters-header">
+                    <h3>Filters</h3>
+                    <button class="reset-button" data-period="weekly">Reset All</button>
+                </div>
+                <div class="filters-grid">
+                    <div class="filter-group">
+                        <label>Employee</label>
+                        <select id="weekly-employee-filter" class="filter-select">
+                            <option value="all">All Employees</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Team (Workspace)</label>
+                        <select id="weekly-team-filter" class="filter-select">
+                            <option value="all">All Teams</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Week</label>
+                        <select id="weekly-week-filter" class="filter-select">
+                            <option value="last">Last Week</option>
+                            <option value="current">Current Week</option>
+                            <option value="all">All Weeks</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="filter-info-bar">
+                    <span id="weekly-filter-info">Showing all records</span>
+                </div>
+            </div>
+
+            <div class="stats-grid" id="weekly-kpis"></div>
+            <div class="charts-grid" id="weekly-charts"></div>
+            <div class="table-container" id="weekly-table"></div>
+        </div>
+
+        <!-- Monthly Dashboard -->
+        <div id="monthly-dashboard" class="dashboard-container">
+            <div class="top-bar">
+                <h1>🏠 Dashboard / Monthly</h1>
+            </div>
+
+            <div class="filters-section">
+                <div class="filters-header">
+                    <h3>Filters</h3>
+                    <button class="reset-button" data-period="monthly">Reset All</button>
+                </div>
+                <div class="filters-grid">
+                    <div class="filter-group">
+                        <label>Employee</label>
+                        <select id="monthly-employee-filter" class="filter-select">
+                            <option value="all">All Employees</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Team (Workspace)</label>
+                        <select id="monthly-team-filter" class="filter-select">
+                            <option value="all">All Teams</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Month</label>
+                        <select id="monthly-month-filter" class="filter-select">
+                            <option value="last">Last Month</option>
+                            <option value="current">Current Month</option>
+                            <option value="all">All Months</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Year</label>
+                        <select id="monthly-year-filter" class="filter-select">
+                            <option value="current">Current Year</option>
+                            <option value="all">All Years</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="filter-info-bar">
+                    <span id="monthly-filter-info">Showing all records</span>
+                </div>
+            </div>
+
+            <div class="stats-grid" id="monthly-kpis"></div>
+            <div class="charts-grid" id="monthly-charts"></div>
+            <div class="table-container" id="monthly-table"></div>
+        </div>
+
+        <!-- Overall Dashboard -->
+        <div id="overall-dashboard" class="dashboard-container">
+            <div class="top-bar">
+                <h1>🏠 Dashboard / Overall</h1>
+            </div>
+
+            <div class="filters-section">
+                <div class="filters-header">
+                    <h3>Filters</h3>
+                    <button class="reset-button" data-period="overall">Reset All</button>
+                </div>
+                <div class="filters-grid">
+                    <div class="filter-group">
+                        <label>Employee</label>
+                        <select id="overall-employee-filter" class="filter-select">
+                            <option value="all">All Employees</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Team (Workspace)</label>
+                        <select id="overall-team-filter" class="filter-select">
+                            <option value="all">All Teams</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Year</label>
+                        <select id="overall-year-filter" class="filter-select">
+                            <option value="all">All Years</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Month</label>
+                        <select id="overall-month-filter" class="filter-select">
+                            <option value="all">All Months</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Date From</label>
+                        <input type="date" id="overall-date-from" class="filter-input">
+                    </div>
+                    <div class="filter-group">
+                        <label>Date To</label>
+                        <input type="date" id="overall-date-to" class="filter-input">
+                    </div>
+                </div>
+                <div class="filter-info-bar">
+                    <span id="overall-filter-info">Showing all records</span>
+                </div>
+            </div>
+
+            <div class="stats-grid" id="overall-kpis"></div>
+            <div class="charts-grid" id="overall-charts"></div>
+            <div class="table-container" id="overall-table"></div>
+        </div>
+
+        <!-- 90 Days Dashboard -->
+        <div id="90days-dashboard" class="dashboard-container">
+            <div class="top-bar">
+                <h1>🏠 Dashboard / 90 Days</h1>
+            </div>
+
+            <div class="filters-section">
+                <div class="filters-header">
+                    <h3>Filters</h3>
+                    <button class="reset-button" data-period="90days">Reset All</button>
+                </div>
+                <div class="filters-grid">
+                    <div class="filter-group">
+                        <label>Employee</label>
+                        <select id="90days-employee-filter" class="filter-select">
+                            <option value="all">All Employees</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Team (Workspace)</label>
+                        <select id="90days-team-filter" class="filter-select">
+                            <option value="all">All Teams</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Date From (Optional)</label>
+                        <input type="date" id="90days-date-from" class="filter-input">
+                    </div>
+                    <div class="filter-group">
+                        <label>Date To (Optional)</label>
+                        <input type="date" id="90days-date-to" class="filter-input">
+                    </div>
+                </div>
+                <div class="filter-info-bar">
+                    <span id="90days-filter-info">Showing all records</span>
+                </div>
+            </div>
+
+            <div class="stats-grid" id="90days-kpis"></div>
+            <div class="charts-grid" id="90days-charts"></div>
+            <div class="table-container" id="90days-table"></div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            AIRTABLE_TOKEN: 'patgXQiT2uTEngx6b.6f0ae131257d5b0980b57ac57461256a8b3afd4e6143e806b4ce9ddff7ed64de',
+            BASE_ID: 'appxXphBWtzBPDwrW',
+            TABLE_NAME: 'Tracket Database',
+            REVENUE_TABLE_NAME: 'EBR'
+        };
+
+        let allRecords = [];
+        let revenueData = [];
+        let charts = {};
+        let currentFilters = {
+            weekly: { employee: 'all', team: 'all', week: 'last' },
+            monthly: { employee: 'all', team: 'all', month: 'last', year: 'current' },
+            overall: { employee: 'all', team: 'all', year: 'all', month: 'all', dateFrom: '', dateTo: '' },
+            '90days': { employee: 'all', team: 'all', dateFrom: '', dateTo: '' }
+        };
+
+        // Fetch records from Airtable
+        async function fetchAllRecords(tableName) {
+            const records = [];
+            let offset = null;
+            
+            try {
+                do {
+                    let url = `https://api.airtable.com/v0/${CONFIG.BASE_ID}/${encodeURIComponent(tableName)}?pageSize=100`;
+                    if (offset) url += `&offset=${offset}`;
+                    
+                    const response = await fetch(url, {
+                        headers: { 'Authorization': `Bearer ${CONFIG.AIRTABLE_TOKEN}` }
+                    });
+                    
+                    if (!response.ok) throw new Error('Failed to fetch data');
+                    
+                    const result = await response.json();
+                    records.push(...result.records);
+                    offset = result.offset;
+                    
+                    if (offset) await new Promise(r => setTimeout(r, 200));
+                } while (offset);
+                
+                return records;
+            } catch (error) {
+                console.error('Error fetching records:', error);
+                throw error;
+            }
+        }
+
+        function getWeekNumber(date) {
+            const d = new Date(date);
+            d.setHours(0, 0, 0, 0);
+            d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+            const yearStart = new Date(d.getFullYear(), 0, 1);
+            return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+        }
+
+        function getWeekKey(date) {
+            const d = new Date(date);
+            return `${d.getFullYear()}-W${String(getWeekNumber(d)).padStart(2, '0')}`;
+        }
+
+        function getStartOfWeek(date) {
+            const d = new Date(date);
+            d.setHours(0, 0, 0, 0);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+            const startOfWeek = new Date(d.setDate(diff));
+            startOfWeek.setHours(0, 0, 0, 0);
+            return startOfWeek;
+        }
+
+        function getEndOfWeek(date) {
+            const start = getStartOfWeek(date);
+            const end = new Date(start);
+            end.setDate(end.getDate() + 6);
+            end.setHours(23, 59, 59, 999);
+            return end;
+        }
+
+        function filterRecordsByPeriod(records, period, filters) {
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth();
+            
+            return records.filter(record => {
+                const fields = record.fields;
+                const dateStr = fields['Worklog Date'];
+                if (!dateStr) return false;
+                
+                const date = new Date(dateStr);
+                let inPeriod = false;
+                
+                if (period === 'weekly') {
+                    if (filters.week === 'last') {
+                        const lastWeekDate = new Date(now);
+                        lastWeekDate.setDate(lastWeekDate.getDate() - 7);
+                        const lastWeekStart = getStartOfWeek(lastWeekDate);
+                        const lastWeekEnd = getEndOfWeek(lastWeekDate);
+                        const recordDate = new Date(dateStr);
+                        recordDate.setHours(0, 0, 0, 0);
+                        inPeriod = recordDate >= lastWeekStart && recordDate <= lastWeekEnd;
+                    } else if (filters.week === 'current') {
+                        const currentWeekStart = getStartOfWeek(now);
+                        const currentWeekEnd = getEndOfWeek(now);
+                        const recordDate = new Date(dateStr);
+                        recordDate.setHours(0, 0, 0, 0);
+                        inPeriod = recordDate >= currentWeekStart && recordDate <= currentWeekEnd;
+                    } else if (filters.week !== 'all') {
+                        const weekKey = getWeekKey(date);
+                        inPeriod = weekKey === filters.week;
+                    } else {
+                        inPeriod = true;
+                    }
+                } else if (period === 'monthly') {
+                    const recordYear = date.getFullYear();
+                    const recordMonth = date.getMonth();
+                    
+                    if (filters.month === 'last') {
+                        const lastMonthDate = new Date(now);
+                        lastMonthDate.setMonth(lastMonthDate.getMonth() - 1);
+                        inPeriod = recordYear === lastMonthDate.getFullYear() && recordMonth === lastMonthDate.getMonth();
+                    } else if (filters.month === 'current') {
+                        inPeriod = recordYear === currentYear && recordMonth === currentMonth;
+                    } else if (filters.month !== 'all') {
+                        const targetMonth = parseInt(filters.month) - 1;
+                        let targetYear = currentYear;
+                        if (filters.year !== 'all' && filters.year !== 'current') {
+                            targetYear = parseInt(filters.year);
+                        }
+                        inPeriod = recordYear === targetYear && recordMonth === targetMonth;
+                    } else {
+                        inPeriod = true;
+                    }
+                    
+                    if (inPeriod && filters.year !== 'all' && filters.year !== 'current') {
+                        inPeriod = recordYear === parseInt(filters.year);
+                    }
+                } else if (period === '90days') {
+                    if (filters.dateFrom && filters.dateTo) {
+                        const fromDate = new Date(filters.dateFrom);
+                        const toDate = new Date(filters.dateTo);
+                        toDate.setHours(23, 59, 59, 999);
+                        inPeriod = date >= fromDate && date <= toDate;
+                    } else {
+                        const days90Ago = new Date(now);
+                        days90Ago.setDate(days90Ago.getDate() - 90);
+                        inPeriod = date >= days90Ago && date <= now;
+                    }
+                } else {
+                    inPeriod = true;
+                }
+                
+                if (!inPeriod) return false;
+                
+                if (filters.employee !== 'all' && fields['Employee Name'] !== filters.employee) return false;
+                if (filters.team !== 'all' && fields['Workspace Name'] !== filters.team) return false;
+                
+                if (period === 'overall') {
+                    const recordYear = date.getFullYear();
+                    const recordMonth = date.getMonth() + 1;
+                    
+                    if (filters.year !== 'all' && recordYear !== parseInt(filters.year)) return false;
+                    if (filters.month !== 'all' && recordMonth !== parseInt(filters.month)) return false;
+                    
+                    if (filters.dateFrom) {
+                        const fromDate = new Date(filters.dateFrom);
+                        if (date < fromDate) return false;
+                    }
+                    if (filters.dateTo) {
+                        const toDate = new Date(filters.dateTo);
+                        toDate.setHours(23, 59, 59, 999);
+                        if (date > toDate) return false;
+                    }
+                }
+                
+                return true;
+            });
+        }
+
+        function populateFilters(records, period) {
+            const employees = new Set();
+            const teams = new Set();
+            const years = new Set();
+            const months = new Set();
+            const weeks = new Set();
+            
+            records.forEach(record => {
+                const fields = record.fields;
+                if (fields['Employee Name']) employees.add(fields['Employee Name']);
+                if (fields['Workspace Name']) teams.add(fields['Workspace Name']);
+                
+                const dateStr = fields['Worklog Date'];
+                if (dateStr) {
+                    const date = new Date(dateStr);
+                    years.add(date.getFullYear());
+                    months.add(date.getMonth() + 1);
+                    weeks.add(getWeekKey(date));
+                }
+            });
+            
+            const employeeSelect = document.getElementById(`${period}-employee-filter`);
+            if (employeeSelect) {
+                employeeSelect.innerHTML = '<option value="all">All Employees</option>';
+                Array.from(employees).sort().forEach(emp => {
+                    employeeSelect.innerHTML += `<option value="${emp}">${emp}</option>`;
+                });
+            }
+            
+            const teamSelect = document.getElementById(`${period}-team-filter`);
+            if (teamSelect) {
+                teamSelect.innerHTML = '<option value="all">All Teams</option>';
+                Array.from(teams).sort().forEach(team => {
+                    teamSelect.innerHTML += `<option value="${team}">${team}</option>`;
+                });
+            }
+            
+            if (period === 'weekly') {
+                const weekSelect = document.getElementById(`${period}-week-filter`);
+                if (weekSelect) {
+                    weekSelect.innerHTML = `
+                        <option value="last">Last Week</option>
+                        <option value="current">Current Week</option>
+                        <option value="all">All Weeks</option>
+                    `;
+                    const sortedWeeks = Array.from(weeks).sort().reverse();
+                    sortedWeeks.forEach(week => {
+                        const [year, weekNum] = week.split('-W');
+                        weekSelect.innerHTML += `<option value="${week}">Week ${weekNum}, ${year}</option>`;
+                    });
+                    weekSelect.value = 'last';
+                }
+            }
+            
+            if (period === 'monthly') {
+                const monthSelect = document.getElementById(`${period}-month-filter`);
+                if (monthSelect) {
+                    monthSelect.innerHTML = `
+                        <option value="last">Last Month</option>
+                        <option value="current">Current Month</option>
+                        <option value="all">All Months</option>
+                    `;
+                    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                                        'July', 'August', 'September', 'October', 'November', 'December'];
+                    Array.from(months).sort((a, b) => a - b).forEach(month => {
+                        monthSelect.innerHTML += `<option value="${month}">${monthNames[month - 1]}</option>`;
+                    });
+                    monthSelect.value = 'last';
+                }
+                
+                const yearSelect = document.getElementById(`${period}-year-filter`);
+                if (yearSelect) {
+                    yearSelect.innerHTML = `
+                        <option value="current">Current Year</option>
+                        <option value="all">All Years</option>
+                    `;
+                    Array.from(years).sort((a, b) => b - a).forEach(year => {
+                        yearSelect.innerHTML += `<option value="${year}">${year}</option>`;
+                    });
+                    yearSelect.value = 'current';
+                }
+            }
+            
+            if (period === 'overall') {
+                const yearSelect = document.getElementById(`${period}-year-filter`);
+                if (yearSelect) {
+                    yearSelect.innerHTML = '<option value="all">All Years</option>';
+                    Array.from(years).sort((a, b) => b - a).forEach(year => {
+                        yearSelect.innerHTML += `<option value="${year}">${year}</option>`;
+                    });
+                }
+                
+                const monthSelect = document.getElementById(`${period}-month-filter`);
+                if (monthSelect) {
+                    monthSelect.innerHTML = '<option value="all">All Months</option>';
+                    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                                        'July', 'August', 'September', 'October', 'November', 'December'];
+                    Array.from(months).sort((a, b) => a - b).forEach(month => {
+                        monthSelect.innerHTML += `<option value="${month}">${monthNames[month - 1]}</option>`;
+                    });
+                }
+            }
+        }
+
+        function setupFilterListeners(period) {
+            const employeeFilter = document.getElementById(`${period}-employee-filter`);
+            const teamFilter = document.getElementById(`${period}-team-filter`);
+            const resetButton = document.querySelector(`.reset-button[data-period="${period}"]`);
+            
+            if (employeeFilter) {
+                employeeFilter.addEventListener('change', (e) => {
+                    currentFilters[period].employee = e.target.value;
+                    updateDashboard(period);
+                });
+            }
+            
+            if (teamFilter) {
+                teamFilter.addEventListener('change', (e) => {
+                    currentFilters[period].team = e.target.value;
+                    updateDashboard(period);
+                });
+            }
+            
+            if (period === 'weekly') {
+                const weekFilter = document.getElementById(`${period}-week-filter`);
+                if (weekFilter) {
+                    weekFilter.addEventListener('change', (e) => {
+                        currentFilters[period].week = e.target.value;
+                        updateDashboard(period);
+                    });
+                }
+            }
+            
+            if (period === 'monthly') {
+                const monthFilter = document.getElementById(`${period}-month-filter`);
+                const yearFilter = document.getElementById(`${period}-year-filter`);
+                
+                if (monthFilter) {
+                    monthFilter.addEventListener('change', (e) => {
+                        currentFilters[period].month = e.target.value;
+                        updateDashboard(period);
+                    });
+                }
+                
+                if (yearFilter) {
+                    yearFilter.addEventListener('change', (e) => {
+                        currentFilters[period].year = e.target.value;
+                        updateDashboard(period);
+                    });
+                }
+            }
+            
+            if (period === 'overall') {
+                const yearFilter = document.getElementById(`${period}-year-filter`);
+                const monthFilter = document.getElementById(`${period}-month-filter`);
+                const dateFromFilter = document.getElementById(`${period}-date-from`);
+                const dateToFilter = document.getElementById(`${period}-date-to`);
+                
+                if (yearFilter) {
+                    yearFilter.addEventListener('change', (e) => {
+                        currentFilters[period].year = e.target.value;
+                        updateDashboard(period);
+                    });
+                }
+                
+                if (monthFilter) {
+                    monthFilter.addEventListener('change', (e) => {
+                        currentFilters[period].month = e.target.value;
+                        updateDashboard(period);
+                    });
+                }
+                
+                if (dateFromFilter) {
+                    dateFromFilter.addEventListener('change', (e) => {
+                        currentFilters[period].dateFrom = e.target.value;
+                        updateDashboard(period);
+                    });
+                }
+                
+                if (dateToFilter) {
+                    dateToFilter.addEventListener('change', (e) => {
+                        currentFilters[period].dateTo = e.target.value;
+                        updateDashboard(period);
+                    });
+                }
+            }
+            
+            if (period === '90days') {
+                const dateFromFilter = document.getElementById(`${period}-date-from`);
+                const dateToFilter = document.getElementById(`${period}-date-to`);
+                
+                if (dateFromFilter) {
+                    dateFromFilter.addEventListener('change', (e) => {
+                        currentFilters[period].dateFrom = e.target.value;
+                        updateDashboard(period);
+                    });
+                }
+                
+                if (dateToFilter) {
+                    dateToFilter.addEventListener('change', (e) => {
+                        currentFilters[period].dateTo = e.target.value;
+                        updateDashboard(period);
+                    });
+                }
+            }
+            
+            if (resetButton) {
+                resetButton.addEventListener('click', () => {
+                    resetFilters(period);
+                });
+            }
+        }
+
+        function resetFilters(period) {
+            if (period === 'weekly') {
+                currentFilters[period] = { employee: 'all', team: 'all', week: 'last' };
+                document.getElementById(`${period}-week-filter`).value = 'last';
+            } else if (period === 'monthly') {
+                currentFilters[period] = { employee: 'all', team: 'all', month: 'last', year: 'current' };
+                document.getElementById(`${period}-month-filter`).value = 'last';
+                document.getElementById(`${period}-year-filter`).value = 'current';
+            } else if (period === 'overall') {
+                currentFilters[period] = { employee: 'all', team: 'all', year: 'all', month: 'all', dateFrom: '', dateTo: '' };
+                document.getElementById(`${period}-year-filter`).value = 'all';
+                document.getElementById(`${period}-month-filter`).value = 'all';
+                document.getElementById(`${period}-date-from`).value = '';
+                document.getElementById(`${period}-date-to`).value = '';
+            } else if (period === '90days') {
+                currentFilters[period] = { employee: 'all', team: 'all', dateFrom: '', dateTo: '' };
+                const dateFromEl = document.getElementById(`${period}-date-from`);
+                const dateToEl = document.getElementById(`${period}-date-to`);
+                if (dateFromEl) dateFromEl.value = '';
+                if (dateToEl) dateToEl.value = '';
+            }
+            
+            document.getElementById(`${period}-employee-filter`).value = 'all';
+            document.getElementById(`${period}-team-filter`).value = 'all';
+            
+            updateDashboard(period);
+        }
+
+        function calculateMetrics(records) {
+            const metrics = {
+                totalBillable: 0,
+                totalNonBillable: 0,
+                employeeData: {}
+            };
+            
+            records.forEach(record => {
+                const fields = record.fields;
+                const emp = fields['Employee Name'] || 'Unknown';
+                const billable = fields['Billable Hours'] || 0;
+                const nonBillable = fields['Non-Billable Hours'] || 0;
+                
+                metrics.totalBillable += billable;
+                metrics.totalNonBillable += nonBillable;
+                
+                if (!metrics.employeeData[emp]) {
+                    metrics.employeeData[emp] = {
+                        billable: 0,
+                        nonBillable: 0,
+                        weeks: new Set()
+                    };
+                }
+                
+                metrics.employeeData[emp].billable += billable;
+                metrics.employeeData[emp].nonBillable += nonBillable;
+                
+                const date = new Date(fields['Worklog Date']);
+                const weekKey = `${date.getFullYear()}-W${getWeekNumber(date)}`;
+                metrics.employeeData[emp].weeks.add(weekKey);
+            });
+            
+            Object.keys(metrics.employeeData).forEach(emp => {
+                const data = metrics.employeeData[emp];
+                const total = data.billable + data.nonBillable;
+                
+                data.utilization = total > 0 ? (data.billable / total) : 0;
+                
+                const weeks = data.weeks.size || 1;
+                const expectedHours = 40 * weeks;
+                data.capacity = expectedHours > 0 ? (data.billable / expectedHours) : 0;
+            });
+            
+            const totalHours = metrics.totalBillable + metrics.totalNonBillable;
+            metrics.avgUtilization = totalHours > 0 ? (metrics.totalBillable / totalHours) : 0;
+            
+            const allWeeks = new Set();
+            Object.values(metrics.employeeData).forEach(d => {
+                d.weeks.forEach(w => allWeeks.add(w));
+            });
+            const totalWeeks = allWeeks.size || 1;
+            const employeeCount = Object.keys(metrics.employeeData).length || 1;
+            const totalExpectedHours = 40 * totalWeeks * employeeCount;
+            metrics.avgCapacity = totalExpectedHours > 0 ? (metrics.totalBillable / totalExpectedHours) : 0;
+            
+            return metrics;
+        }
+
+        function calculate90DaysMetrics(records, revenueRecords) {
+            const metrics = calculateMetrics(records);
+            
+            const now = new Date();
+            const days90Ago = new Date(now);
+            days90Ago.setDate(days90Ago.getDate() - 90);
+            days90Ago.setHours(0, 0, 0, 0);
+            
+            let totalRevenue = 0;
+            
+            revenueRecords.forEach(record => {
+                const fields = record.fields;
+                const dateStr = fields['Date'] || fields['Worklog Date'] || fields['Created'] || fields['date'] || fields['Invoice Date'];
+                
+                if (dateStr) {
+                    const date = new Date(dateStr);
+                    date.setHours(0, 0, 0, 0);
+                    
+                    if (date >= days90Ago && date <= now) {
+                        const revenue = fields['Revenue'] || 
+                                       fields['Amount'] || 
+                                       fields['Billable Amount'] || 
+                                       fields['Total'] || 
+                                       fields['revenue'] || 
+                                       fields['amount'] || 
+                                       0;
+                        
+                        totalRevenue += parseFloat(revenue) || 0;
+                    }
+                }
+            });
+            
+            metrics.totalRevenue = totalRevenue;
+            metrics.ebr = metrics.totalBillable > 0 ? (totalRevenue / metrics.totalBillable) : 0;
+            
+            return metrics;
+        }
+
+        function renderDashboard(period, metrics, filteredCount, totalCount) {
+            const is90Days = period === '90days';
+            
+            const filterInfo = document.getElementById(`${period}-filter-info`);
+            if (filterInfo) {
+                filterInfo.textContent = `Showing ${filteredCount.toLocaleString()} of ${totalCount.toLocaleString()} records`;
+            }
+            
+            const kpisContainer = document.getElementById(`${period}-kpis`);
+            kpisContainer.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>Total Billable Hours</h3>
+                        <div class="stat-value">${metrics.totalBillable.toFixed(2)}</div>
+                    </div>
+                    <div class="stat-icon icon-blue">⏱️</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>Non-Billable Hours</h3>
+                        <div class="stat-value">${metrics.totalNonBillable.toFixed(2)}</div>
+                    </div>
+                    <div class="stat-icon icon-orange">📝</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>Total Hours</h3>
+                        <div class="stat-value">${(metrics.totalBillable + metrics.totalNonBillable).toFixed(2)}</div>
+                    </div>
+                    <div class="stat-icon icon-purple">📊</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>Utilization Rate</h3>
+                        <div class="stat-value">${(metrics.avgUtilization * 100).toFixed(1)}%</div>
+                        <div class="stat-change">Billable / Total Hours</div>
+                    </div>
+                    <div class="stat-icon icon-green">📈</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>Capacity Rate</h3>
+                        <div class="stat-value">${(metrics.avgCapacity * 100).toFixed(1)}%</div>
+                        <div class="stat-change">Billable / (40hrs/week)</div>
+                    </div>
+                    <div class="stat-icon icon-teal">⚡</div>
+                </div>
+                ${is90Days ? `
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>Total Revenue</h3>
+                        <div class="stat-value">${metrics.totalRevenue.toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
+                    </div>
+                    <div class="stat-icon icon-pink">💰</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>EBR (Effective Bill Rate)</h3>
+                        <div class="stat-value">${metrics.ebr.toFixed(2)}</div>
+                        <div class="stat-change">Revenue / Billable Hours</div>
+                    </div>
+                    <div class="stat-icon icon-dark">💵</div>
+                </div>
+                ` : ''}
+            `;
+            
+            const chartsContainer = document.getElementById(`${period}-charts`);
+            chartsContainer.innerHTML = `
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3>Billable vs Non-Billable</h3>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="${period}-pie-chart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3>Utilization by Employee</h3>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="${period}-utilization-chart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3>Capacity by Employee</h3>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="${period}-capacity-chart"></canvas>
+                    </div>
+                </div>
+            `;
+            
+            renderPieChart(period, metrics.totalBillable, metrics.totalNonBillable);
+            renderUtilizationChart(period, metrics.employeeData);
+            renderCapacityChart(period, metrics.employeeData);
+            
+            const tableContainer = document.getElementById(`${period}-table`);
+            tableContainer.innerHTML = `
+                <h3>Utilization & Capacity Summary</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Billable Hours</th>
+                            <th>Non-Billable Hours</th>
+                            <th>Total Hours</th>
+                            <th>Utilization %</th>
+                            <th>Capacity %</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${Object.entries(metrics.employeeData)
+                            .sort(([,a], [,b]) => b.billable - a.billable)
+                            .map(([name, data]) => `
+                                <tr>
+                                    <td><strong>${name}</strong></td>
+                                    <td>${data.billable.toFixed(2)}</td>
+                                    <td>${data.nonBillable.toFixed(2)}</td>
+                                    <td>${(data.billable + data.nonBillable).toFixed(2)}</td>
+                                    <td>${(data.utilization * 100).toFixed(1)}%</td>
+                                    <td>${(data.capacity * 100).toFixed(1)}%</td>
+                                </tr>
+                            `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function renderPieChart(period, billable, nonBillable) {
+            const ctx = document.getElementById(`${period}-pie-chart`).getContext('2d');
+            
+            if (charts[`${period}-pie`]) {
+                charts[`${period}-pie`].destroy();
+            }
+            
+            charts[`${period}-pie`] = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Billable', 'Non-Billable'],
+                    datasets: [{
+                        data: [billable, nonBillable],
+                        backgroundColor: ['#3A80F7', '#FF9800']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        }
+
+        function renderUtilizationChart(period, employeeData) {
+            const ctx = document.getElementById(`${period}-utilization-chart`).getContext('2d');
+            
+            if (charts[`${period}-util`]) {
+                charts[`${period}-util`].destroy();
+            }
+            
+            const sorted = Object.entries(employeeData)
+                .sort(([,a], [,b]) => b.utilization - a.utilization)
+                .slice(0, 10);
+            
+            charts[`${period}-util`] = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: sorted.map(([name]) => name),
+                    datasets: [{
+                        label: 'Utilization %',
+                        data: sorted.map(([,data]) => data.utilization * 100),
+                        backgroundColor: '#4CAF50',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                callback: value => value + '%'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        function renderCapacityChart(period, employeeData) {
+            const ctx = document.getElementById(`${period}-capacity-chart`).getContext('2d');
+            
+            if (charts[`${period}-cap`]) {
+                charts[`${period}-cap`].destroy();
+            }
+            
+            const sorted = Object.entries(employeeData)
+                .sort(([,a], [,b]) => b.capacity - a.capacity)
+                .slice(0, 10);
+            
+            charts[`${period}-cap`] = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: sorted.map(([name]) => name),
+                    datasets: [{
+                        label: 'Capacity %',
+                        data: sorted.map(([,data]) => data.capacity * 100),
+                        backgroundColor: '#9C27B0',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: value => value + '%'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        function updateDashboard(period) {
+            let defaultFilters;
+            if (period === 'weekly') {
+                defaultFilters = { employee: 'all', team: 'all', week: 'last' };
+            } else if (period === 'monthly') {
+                defaultFilters = { employee: 'all', team: 'all', month: 'last', year: 'current' };
+            } else if (period === '90days') {
+                defaultFilters = { employee: 'all', team: 'all', dateFrom: '', dateTo: '' };
+            } else {
+                defaultFilters = { employee: 'all', team: 'all', year: 'all', month: 'all', dateFrom: '', dateTo: '' };
+            }
+            
+            const baseRecords = filterRecordsByPeriod(allRecords, period, defaultFilters);
+            const filteredRecords = filterRecordsByPeriod(allRecords, period, currentFilters[period]);
+            
+            let metrics;
+            if (period === '90days') {
+                metrics = calculate90DaysMetrics(filteredRecords, revenueData);
+            } else {
+                metrics = calculateMetrics(filteredRecords);
+            }
+            
+            renderDashboard(period, metrics, filteredRecords.length, baseRecords.length);
+        }
+
+        async function init() {
+            try {
+                document.getElementById('loading').style.display = 'block';
+                
+                [allRecords, revenueData] = await Promise.all([
+                    fetchAllRecords(CONFIG.TABLE_NAME),
+                    fetchAllRecords(CONFIG.REVENUE_TABLE_NAME)
+                ]);
+                
+                const periods = ['weekly', 'monthly', 'overall', '90days'];
+                periods.forEach(period => {
+                    populateFilters(allRecords, period);
+                    setupFilterListeners(period);
+                    updateDashboard(period);
+                });
+                
+                // Setup sidebar navigation
+                document.querySelectorAll('.nav-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const period = item.dataset.period;
+                        
+                        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                        item.classList.add('active');
+                        
+                        document.querySelectorAll('.dashboard-container').forEach(d => d.classList.remove('active'));
+                        document.getElementById(`${period}-dashboard`).classList.add('active');
+                    });
+                });
+                
+                document.getElementById('loading').style.display = 'none';
+                
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('loading').innerHTML = `
+                    <div style="color: #EF4444;">
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', init)

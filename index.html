@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time Tracking Dashboards</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <!-- Dashboard Selector -->
+    <div class="dashboard-selector">
+        <h1>Time Tracking Dashboards</h1>
+        <div class="dashboard-tabs">
+            <button class="tab-button active" data-period="weekly">Weekly</button>
+            <button class="tab-button" data-period="monthly">Monthly</button>
+            <button class="tab-button" data-period="overall">Overall</button>
+            <button class="tab-button" data-period="90days">90 Days</button>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <p>Loading data from Airtable...</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="error" style="display: none;"></div>
+
+    <!-- Weekly Dashboard -->
+    <div id="weekly-dashboard" class="dashboard-container active">
+        <!-- Filters Section -->
+        <div class="filters-section">
+            <div class="filters-header">
+                <h2>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                    </svg>
+                    Filters
+                </h2>
+                <button class="reset-button" data-period="weekly">Reset All</button>
+            </div>
+            
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label for="weekly-employee-filter">Employee</label>
+                    <select id="weekly-employee-filter" class="filter-select">
+                        <option value="all">All Employees</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="weekly-team-filter">Team (Workspace)</label>
+                    <select id="weekly-team-filter" class="filter-select">
+                        <option value="all">All Teams</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="weekly-week-filter">Week</label>
+                    <select id="weekly-week-filter" class="filter-select">
+                        <option value="last">Last Week</option>
+                        <option value="current">Current Week</option>
+                        <option value="all">All Weeks</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="filter-info-bar">
+                <span id="weekly-filter-info">Showing all records</span>
+            </div>
+        </div>
+
+        <!-- Dashboard Content -->
+        <div class="dashboard-content">
+            <div class="header">
+                <h2>Weekly Dashboard</h2>
+                <p>Last week's time tracking metrics</p>
+            </div>
+            
+            <div class="kpi-grid" id="weekly-kpis"></div>
+            <div class="charts-grid" id="weekly-charts"></div>
+            <div class="table-container" id="weekly-table"></div>
+        </div>
+    </div>
+
+    <!-- Monthly Dashboard -->
+    <div id="monthly-dashboard" class="dashboard-container">
+        <!-- Filters Section -->
+        <div class="filters-section">
+            <div class="filters-header">
+                <h2>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                    </svg>
+                    Filters
+                </h2>
+                <button class="reset-button" data-period="monthly">Reset All</button>
+            </div>
+            
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label for="monthly-employee-filter">Employee</label>
+                    <select id="monthly-employee-filter" class="filter-select">
+                        <option value="all">All Employees</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="monthly-team-filter">Team (Workspace)</label>
+                    <select id="monthly-team-filter" class="filter-select">
+                        <option value="all">All Teams</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="monthly-month-filter">Month</label>
+                    <select id="monthly-month-filter" class="filter-select">
+                        <option value="last">Last Month</option>
+                        <option value="current">Current Month</option>
+                        <option value="all">All Months</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="monthly-year-filter">Year</label>
+                    <select id="monthly-year-filter" class="filter-select">
+                        <option value="current">Current Year</option>
+                        <option value="all">All Years</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="filter-info-bar">
+                <span id="monthly-filter-info">Showing all records</span>
+            </div>
+        </div>
+
+        <!-- Dashboard Content -->
+        <div class="dashboard-content">
+            <div class="header">
+                <h2>Monthly Dashboard</h2>
+                <p>Last month's time tracking metrics</p>
+            </div>
+            
+            <div class="kpi-grid" id="monthly-kpis"></div>
+            <div class="charts-grid" id="monthly-charts"></div>
+            <div class="table-container" id="monthly-table"></div>
+        </div>
+    </div>
+
+    <!-- Overall Dashboard -->
+    <div id="overall-dashboard" class="dashboard-container">
+        <!-- Filters Section -->
+        <div class="filters-section">
+            <div class="filters-header">
+                <h2>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                    </svg>
+                    Filters
+                </h2>
+                <button class="reset-button" data-period="overall">Reset All</button>
+            </div>
+            
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label for="overall-employee-filter">Employee</label>
+                    <select id="overall-employee-filter" class="filter-select">
+                        <option value="all">All Employees</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="overall-team-filter">Team (Workspace)</label>
+                    <select id="overall-team-filter" class="filter-select">
+                        <option value="all">All Teams</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="overall-year-filter">Year</label>
+                    <select id="overall-year-filter" class="filter-select">
+                        <option value="all">All Years</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="overall-month-filter">Month</label>
+                    <select id="overall-month-filter" class="filter-select">
+                        <option value="all">All Months</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="overall-date-from">Date From</label>
+                    <input type="date" id="overall-date-from" class="filter-input">
+                </div>
+
+                <div class="filter-group">
+                    <label for="overall-date-to">Date To</label>
+                    <input type="date" id="overall-date-to" class="filter-input">
+                </div>
+            </div>
+
+            <div class="filter-info-bar">
+                <span id="overall-filter-info">Showing all records</span>
+            </div>
+        </div>
+
+        <!-- Dashboard Content -->
+        <div class="dashboard-content">
+            <div class="header">
+                <h2>Overall Dashboard</h2>
+                <p>All-time time tracking metrics</p>
+            </div>
+            
+            <div class="kpi-grid" id="overall-kpis"></div>
+            <div class="charts-grid" id="overall-charts"></div>
+            <div class="table-container" id="overall-table"></div>
+        </div>
+    </div>
+
+    <!-- 90 Days Dashboard -->
+    <div id="90days-dashboard" class="dashboard-container">
+        <!-- Filters Section -->
+        <div class="filters-section">
+            <div class="filters-header">
+                <h2>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                    </svg>
+                    Filters
+                </h2>
+                <button class="reset-button" data-period="90days">Reset All</button>
+            </div>
+            
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label for="90days-employee-filter">Employee</label>
+                    <select id="90days-employee-filter" class="filter-select">
+                        <option value="all">All Employees</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="90days-team-filter">Team (Workspace)</label>
+                    <select id="90days-team-filter" class="filter-select">
+                        <option value="all">All Teams</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="90days-date-from">Date From (Optional)</label>
+                    <input type="date" id="90days-date-from" class="filter-input">
+                </div>
+
+                <div class="filter-group">
+                    <label for="90days-date-to">Date To (Optional)</label>
+                    <input type="date" id="90days-date-to" class="filter-input">
+                </div>
+            </div>
+
+            <div class="filter-info-bar">
+                <span id="90days-filter-info">Showing all records</span>
+            </div>
+        </div>
+
+        <!-- Dashboard Content -->
+        <div class="dashboard-content">
+            <div class="header">
+                <h2>90 Days Dashboard</h2>
+                <p>Last 90 days time tracking metrics with revenue</p>
+            </div>
+            
+            <div class="kpi-grid" id="90days-kpis"></div>
+            <div class="charts-grid" id="90days-charts"></div>
+            <div class="table-container" id="90days-table"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
